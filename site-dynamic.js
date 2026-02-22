@@ -25,6 +25,12 @@ const portfolioRuntime = {
   activeIndex: -1,
   revealObserver: null,
   keyboardBound: false,
+  tiltState: {}, // rastrear estado de tilt por card
+  gyroActive: false,
+  gyroPermission: null,
+  currentZoomLevel: 1,
+  panX: 0,
+  panY: 0,
 };
 
 const normalizeText = (value) => String(value || '').trim();
@@ -36,6 +42,17 @@ const escapeHtml = (value) =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+
+// Utility functions for animations
+const lerp = (start, end, factor) => start + (end - start) * factor;
+const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+const mapRange = (val, inMin, inMax, outMin, outMax) => {
+  return ((val - inMin) / (inMax - inMin)) * (outMax - outMin) + outMin;
+};
+
+const prefersReducedMotion = () => {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
 
 const fetchJson = async (url) => {
   const response = await fetch(url, { method: 'GET' });
@@ -89,6 +106,33 @@ const ensureDynamicStyle = () => {
       color: #4a4a6a;
       font-weight: 500;
     }
+    .wb-portfolio-filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      padding: 12px 0;
+    }
+    .wb-portfolio-filter {
+      padding: 8px 16px;
+      border: 1.5px solid #d4d4d4;
+      background: #fff;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #4a4a6a;
+      transition: all 0.25s ease;
+    }
+    .wb-portfolio-filter:hover {
+      border-color: #ff2d9b;
+      color: #ff2d9b;
+    }
+    .wb-portfolio-filter.active {
+      background: #ff2d9b;
+      border-color: #ff2d9b;
+      color: #fff;
+    }
     .wb-dynamic-lines {
       display: grid;
       gap: 8px;
@@ -119,6 +163,7 @@ const ensureDynamicStyle = () => {
       gap: 18px;
       grid-template-columns: repeat(12, minmax(0, 1fr));
       grid-auto-rows: minmax(68px, auto);
+      perspective: 1200px;
     }
     .wb-portfolio-card {
       grid-column: span 6;
@@ -131,10 +176,16 @@ const ensureDynamicStyle = () => {
       transform: translateY(26px) scale(0.985);
       transition: opacity 0.65s ease, transform 0.65s cubic-bezier(.2,.72,.21,1), box-shadow 0.35s ease;
       will-change: transform, opacity;
+      position: relative;
+      cursor: pointer;
+      transform-style: preserve-3d;
     }
     .wb-portfolio-card.is-visible {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+    .wb-portfolio-card.is-tilting {
+      transition: none;
     }
     .wb-portfolio-card:nth-child(3n+1) {
       grid-column: span 7;
@@ -148,8 +199,25 @@ const ensureDynamicStyle = () => {
       grid-column: span 4;
       grid-row: span 4;
     }
+    .wb-portfolio-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        600px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.1),
+        transparent 80%
+      );
+      opacity: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      z-index: 10;
+    }
+    .wb-portfolio-card:hover::after {
+      opacity: 1;
+    }
     .wb-portfolio-card:hover {
-      transform: translateY(-6px) scale(1.005);
+      transform: translateY(-6px) scale(1.005) rotateX(0deg) rotateY(0deg);
       box-shadow: 0 24px 54px rgba(15, 15, 26, 0.14);
     }
     .wb-portfolio-media {
@@ -157,6 +225,8 @@ const ensureDynamicStyle = () => {
       overflow: hidden;
       aspect-ratio: 5 / 4;
       background: linear-gradient(160deg, #f6d6e6, #f8f3ff);
+      transform-style: preserve-3d;
+      transform: translateZ(0);
     }
     .wb-portfolio-card:nth-child(3n+1) .wb-portfolio-media {
       aspect-ratio: 5 / 5;
@@ -169,11 +239,11 @@ const ensureDynamicStyle = () => {
       height: 100%;
       object-fit: cover;
       display: block;
-      transform: scale(1);
+      transform: scale(1) translateZ(0);
       transition: transform 0.8s cubic-bezier(.2,.72,.21,1), filter 0.45s ease;
     }
     .wb-portfolio-card:hover .wb-portfolio-media img {
-      transform: scale(1.15) rotate(-0.5deg);
+      transform: scale(1.15) rotate(-0.5deg) translateZ(0);
       filter: saturate(1.12) contrast(1.08) brightness(1.05);
     }
     .wb-portfolio-gradient {
@@ -183,9 +253,8 @@ const ensureDynamicStyle = () => {
       opacity: 0.86;
       transition: opacity 0.45s ease;
       pointer-events: none;
-    }
-    .wb-portfolio-card:hover .wb-portfolio-gradient {
-      opacity: 0.98;
+      transform-style: preserve-3d;
+      transform: translateZ(10px);
     }
     .wb-portfolio-floating {
       position: absolute;
@@ -679,6 +748,7 @@ const buildPortfolio = (items) => {
   wirePortfolioReveal();
   wirePortfolioOpenButtons();
   wirePortfolioFilters();
+  wirePortfolioFilters();
   ensurePortfolioLightbox();
 };
 
@@ -865,6 +935,38 @@ const wirePortfolioOpenButtons = () => {
   }
 };
 
+const wirePortfolioFilters = () => {
+  const filters = Array.from(document.querySelectorAll('[data-filter]'));
+  const cards = Array.from(document.querySelectorAll('[data-portfolio-category]'));
+  
+  if (!filters.length) return;
+
+  for (const filter of filters) {
+    if (!(filter instanceof HTMLElement) || filter.dataset.filterBound === '1') {
+      continue;
+    }
+
+    filter.dataset.filterBound = '1';
+    filter.addEventListener('click', () => {
+      // Update active state
+      filters.forEach(f => f.classList.remove('active'));
+      filter.classList.add('active');
+      
+      // Filter cards
+      const selectedFilter = filter.dataset.filter;
+      cards.forEach(card => {
+        if (selectedFilter === 'all' || card.dataset.portfolioCategory === selectedFilter) {
+          card.style.display = '';
+          requestAnimationFrame(() => card.classList.add('is-visible'));
+        } else {
+          card.classList.remove('is-visible');
+          card.style.display = 'none';
+        }
+      });
+    });
+  }
+};
+
 const wirePortfolioReveal = () => {
   const cards = Array.from(document.querySelectorAll('.wb-portfolio-card'));
   if (!cards.length) {
@@ -976,6 +1078,218 @@ const toContentMap = (items) => {
   return map;
 };
 
+// 3D TILT CARD SYSTEM
+const wirePortfolioCardTilt = () => {
+  if (prefersReducedMotion()) return;
+
+  const cards = Array.from(document.querySelectorAll('.wb-portfolio-card'));
+  
+  // Desktop mouse tracking
+  cards.forEach((card) => {
+    const media = card.querySelector('.wb-portfolio-media');
+    if (!media) return;
+
+    portfolioRuntime.tiltState[card.id || 'card'] = {
+      rotateX: { current: 0, target: 0 },
+      rotateY: { current: 0, target: 0 },
+      glareX: 50,
+      glareY: 50,
+    };
+
+    card.addEventListener('mouseenter', () => {
+      card.classList.add('is-tilting');
+    });
+
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const rotateY = mapRange(x, 0, rect.width, -15, 15);
+      const rotateX = mapRange(y, 0, rect.height, 15, -15);
+
+      card.style.setProperty('--mouse-x', `${(x / rect.width) * 100}%`);
+      card.style.setProperty('--mouse-y', `${(y / rect.height) * 100}%`);
+
+      card.style.transform = `
+        translateY(-6px) scale(1.005)
+        rotateX(${rotateX}deg)
+        rotateY(${rotateY}deg)
+      `.trim();
+
+      media.style.transform = `translateZ(20px)`;
+    });
+
+    card.addEventListener('mouseleave', () => {
+      card.classList.remove('is-tilting');
+      card.style.transform = 'translateY(-6px) scale(1.005) rotateX(0) rotateY(0)';
+      media.style.transform = 'translateZ(0)';
+    });
+  });
+};
+
+// GYROSCOPE SUPPORT
+const setupGyroscope = () => {
+  if (prefersReducedMotion()) return;
+  
+  const hasGyro = 'DeviceOrientationEvent' in window;
+  if (!hasGyro) return;
+
+  const requestGyroPermission = async () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission === 'granted') {
+          portfolioRuntime.gyroPermission = 'granted';
+          activateGyroTilt();
+        }
+      } catch (err) {
+        console.log('Gyro permission denied or unavailable');
+      }
+    } else {
+      // Non-iOS devices
+      portfolioRuntime.gyroPermission = 'granted';
+      activateGyroTilt();
+    }
+  };
+
+  // Adicionar botão para solicitar permissão
+  const cards = Array.from(document.querySelectorAll('.wb-portfolio-card'));
+  if (cards.length > 0 && !portfolioRuntime.gyroPermission) {
+    document.addEventListener('touchstart', requestGyroPermission, { once: true });
+  }
+};
+
+const activateGyroTilt = () => {
+  const cards = Array.from(document.querySelectorAll('.wb-portfolio-card'));
+  const smoothFactor = 0.12;
+
+  window.addEventListener('deviceorientation', (event) => {
+    const { beta, gamma } = event;
+    if (beta === null || gamma === null) return;
+
+    cards.forEach((card) => {
+      const rotateX = mapRange(beta, -45, 45, -15, 15);
+      const rotateY = mapRange(gamma, -45, 45, -15, 15);
+
+      const state = portfolioRuntime.tiltState[card.id] || { rotateX: { current: 0 }, rotateY: { current: 0 } };
+      state.rotateX.current = lerp(state.rotateX.current, rotateX, smoothFactor);
+      state.rotateY.current = lerp(state.rotateY.current, rotateY, smoothFactor);
+
+      card.style.transform = `
+        translateY(-6px) scale(1.005)
+        rotateX(${state.rotateX.current}deg)
+        rotateY(${state.rotateY.current}deg)
+      `.trim();
+    });
+  });
+
+  portfolioRuntime.gyroActive = true;
+};
+
+// ADVANCED LIGHTBOX WITH ZOOM & PAN
+const upgradePortfolioLightbox = () => {
+  const lightbox = document.getElementById(IDS.lightbox);
+  if (!lightbox) return;
+
+  const imageEl = lightbox.querySelector('[data-lightbox-image]');
+  if (!(imageEl instanceof HTMLImageElement)) return;
+
+  let currentZoom = 1;
+  let panX = 0;
+  let panY = 0;
+  let lastX = 0, lastY = 0;
+  let isPanning = false;
+
+  // Zoom com mouse wheel
+  lightbox.addEventListener('wheel', (e) => {
+    if (e.deltaY === 0) return;
+    e.preventDefault();
+
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = clamp(currentZoom * delta, 1, 3);
+    
+    if (newZoom !== currentZoom) {
+      currentZoom = newZoom;
+      updateImageTransform();
+    }
+  }, { passive: false });
+
+  // Touch pinch-to-zoom
+  let lastDistance = 0;
+  lightbox.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (lastDistance > 0) {
+        const factor = distance / lastDistance;
+        const newZoom = clamp(currentZoom * factor, 1, 3);
+        if (newZoom !== currentZoom) {
+          currentZoom = newZoom;
+          updateImageTransform();
+        }
+      }
+      lastDistance = distance;
+    }
+  }, { passive: false });
+
+  lightbox.addEventListener('touchend', () => {
+    lastDistance = 0;
+  });
+
+  // Pan com drag quando em zoom
+  imageEl.addEventListener('mousedown', (e) => {
+    if (currentZoom > 1) {
+      isPanning = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isPanning && lightbox.classList.contains('is-open')) {
+      const deltaX = e.clientX - lastX;
+      const deltaY = e.clientY - lastY;
+
+      panX = clamp(panX + deltaX, -(imageEl.width * (currentZoom - 1)) / 2, (imageEl.width * (currentZoom - 1)) / 2);
+      panY = clamp(panY + deltaY, -(imageEl.height * (currentZoom - 1)) / 2, (imageEl.height * (currentZoom - 1)) / 2);
+
+      lastX = e.clientX;
+      lastY = e.clientY;
+      updateImageTransform();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    isPanning = false;
+  });
+
+  // Resetar zoom ao fechar
+  const origClose = window.closePortfolioLightbox;
+  window.closePortfolioLightbox = function() {
+    currentZoom = 1;
+    panX = 0;
+    panY = 0;
+    updateImageTransform();
+    origClose.call(this);
+  };
+
+  function updateImageTransform() {
+    imageEl.style.transform = `
+      scale(${currentZoom})
+      translate(${panX}px, ${panY}px)
+    `.trim();
+  }
+
+  portfolioRuntime.currentZoomLevel = currentZoom;
+};
+
 const initDynamicPublicContent = async () => {
   ensureDynamicStyle();
 
@@ -994,6 +1308,9 @@ const initDynamicPublicContent = async () => {
   buildShop(products);
   wireWorksButtons();
   wireShopButtons();
+  wirePortfolioCardTilt();
+  setupGyroscope();
+  upgradePortfolioLightbox();
 
   const root = document.getElementById('root');
   if (root) {

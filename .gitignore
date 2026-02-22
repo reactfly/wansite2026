@@ -1,0 +1,16 @@
+# Node
+node_modules/
+.env
+.env.*
+dist/
+build/
+.vercel/
+.next/
+.vscode/
+.idea/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+public/uploads/

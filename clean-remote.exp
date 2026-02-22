@@ -1,0 +1,27 @@
+#!/usr/bin/env expect -f
+set timeout 10
+set user "u146190565"
+set host "82.25.67.148"
+set port 65002
+set password "Ayl@2026##"
+set remote_path "/home/u146190565/domains/wanbitha.com.br/public_html"
+
+spawn ssh -p $port $user@$host
+
+expect {
+    "Are you sure" {
+        send "yes\r"
+        exp_continue
+    }
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "$ " {
+        send "cd $remote_path && rm -rf * .htaccess .env .server.pid 2>/dev/null\r"
+        send "echo 'Servidor limpo com sucesso'\r"
+        send "exit\r"
+    }
+}
+
+expect eof

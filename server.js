@@ -1,5 +1,8 @@
 import express from 'express';
 import compression from 'compression';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
 import { fileURLToPath } from 'url';
 import { basename, dirname, join } from 'path';
 import multer from 'multer';
@@ -14,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = Number(process.env.PORT || 3001);
+const PORT = Number(process.env.PORT || 3000);
 
 const DIST_DIR = join(__dirname, 'dist');
 const DIST_INDEX = join(DIST_DIR, 'index.html');
@@ -25,10 +28,10 @@ const POSTS_FILE = join(__dirname, 'posts.json');
 const UPLOADS_DIR = join(__dirname, 'public', 'uploads');
 
 const DB_CONFIG = {
-  host: process.env.DB_HOST || '193.203.175.253',
-  user: process.env.DB_USER || 'u146190565_wanessa',
-  password: process.env.DB_PASSWORD || 'Alexandre2026@@',
-  database: process.env.DB_NAME || 'u146190565_wanbitha',
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
@@ -38,10 +41,10 @@ const DB_CONFIG = {
 };
 
 const AUTH_COOKIE_NAME = 'wb_admin_token';
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'wb-change-this-secret';
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.ADMIN_JWT_EXPIRES_IN || '12h';
 const ADMIN_DEFAULT_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123456';
+const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD;
 
 const CONTENT_TYPES = new Set(['text', 'richtext', 'json']);
 const ORDER_STATUSES = new Set(['novo', 'aguardando_pagamento', 'pago', 'em_preparo', 'enviado', 'entregue', 'cancelado']);
@@ -57,6 +60,11 @@ const DEFAULT_SITE_CONTENT = [
 
 let dbPool = null;
 
+// Segurança e performance
+app.use(helmet());
+app.use(compression());
+app.use(morgan('combined'));
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -1868,9 +1876,9 @@ app.use((req, res) => {
 const startServer = async () => {
   await initializeDatabase();
 
-  app.listen(PORT, () => {
-    console.log(`Servidor ativo em http://localhost:${PORT}`);
-    console.log(`Painel admin: http://localhost:${PORT}/admin`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor ativo na porta ${PORT}`);
+    console.log(`Painel admin: /admin`);
   });
 };
 
