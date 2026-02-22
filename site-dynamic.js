@@ -623,10 +623,22 @@ const buildPortfolio = (items) => {
     year: normalizeText(item.year) || 'Sem ano',
   }));
 
+  const categories = Array.from(
+    new Set(portfolioRuntime.items.map(item => item.category))
+  ).sort();
+
+  const filters = [
+    '<button class="wb-portfolio-filter active" data-filter="all">Todos</button>',
+    ...categories.map(
+      (cat) => `<button class="wb-portfolio-filter" data-filter="${escapeHtml(cat)}">` +
+      `${escapeHtml(cat)}</button>`
+    )
+  ].join('');
+
   const cards = portfolioRuntime.items
     .map(
       (item, index) => `
-      <article class="wb-portfolio-card wb-reveal" data-portfolio-index="${index}">
+      <article class="wb-portfolio-card wb-reveal" data-portfolio-index="${index}" data-portfolio-category="${escapeHtml(item.category)}">
         <div class="wb-portfolio-media">
           <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}" loading="lazy" />
           <div class="wb-portfolio-gradient"></div>
@@ -652,12 +664,13 @@ const buildPortfolio = (items) => {
 
   section.innerHTML = `
     <div class="wb-dynamic-inner">
-      <p class="wb-dynamic-kicker">Portfolio</p>
-      <h2 class="wb-dynamic-title">Portfolio de Trabalhos</h2>
-      <p class="wb-dynamic-role">Galeria imersiva - destaques do portfolio</p>
+      <p class="wb-dynamic-kicker">Galeria Premium</p>
+      <h2 class="wb-dynamic-title">Portfólio de Trabalhos</h2>
+      <p class="wb-dynamic-role">Explore a coleção completa de criações artísticas</p>
+      ${portfolioRuntime.items.length > 0 ? `<div class="wb-portfolio-filters">${filters}</div>` : ''}
       <div class="wb-portfolio-stage">
         <div class="wb-portfolio-grid">
-          ${cards || '<p class="wb-portfolio-desc">Nenhum trabalho ativo no portfolio.</p>'}
+          ${cards || '<p class="wb-portfolio-desc" style="grid-column: 1 / -1; text-align: center; padding: 40px;">Nenhum trabalho ativo no portfolio.</p>'}
         </div>
       </div>
     </div>
@@ -665,6 +678,7 @@ const buildPortfolio = (items) => {
 
   wirePortfolioReveal();
   wirePortfolioOpenButtons();
+  wirePortfolioFilters();
   ensurePortfolioLightbox();
 };
 
