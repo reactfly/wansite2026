@@ -15,6 +15,15 @@ import cookieParser from 'cookie-parser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const ENV_FILE = join(__dirname, '.env');
+
+if (typeof process.loadEnvFile === 'function' && fs.existsSync(ENV_FILE)) {
+  try {
+    process.loadEnvFile(ENV_FILE);
+  } catch (error) {
+    console.warn(`[env] Falha ao carregar .env automaticamente: ${error.message}`);
+  }
+}
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);

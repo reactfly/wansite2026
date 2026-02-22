@@ -184,7 +184,12 @@ const apiRequest = async (url, options = {}) => {
   const data = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const errorMessage = data?.error || data?.message || data || `Erro HTTP ${response.status}`;
+    const errorMessage =
+      data && typeof data === 'object' && data.error
+        ? data.details
+          ? `${data.error}: ${data.details}`
+          : data.error
+        : data?.message || data || `Erro HTTP ${response.status}`;
     throw new Error(errorMessage);
   }
 
@@ -260,6 +265,118 @@ const checkAuth = async () => {
     setView(false);
   }
 };
+
+const domBindings = {
+  loginView,
+  adminView,
+  toast,
+  userLabel,
+  loginForm,
+  loginUsername,
+  loginPassword,
+  logoutBtn,
+  refreshAllBtn,
+  tabsNav,
+  dashPosts,
+  dashLikes,
+  dashContent,
+  dashPortfolio,
+  dashProducts,
+  dashActiveProducts,
+  dashOrders,
+  dashPendingOrders,
+  dashUsers,
+  dashUpdated,
+  contentFormTitle,
+  contentForm,
+  contentResetBtn,
+  contentSearch,
+  contentTable,
+  contentId,
+  contentKey,
+  contentSection,
+  contentTitle,
+  contentType,
+  contentValue,
+  contentSort,
+  postFormTitle,
+  postForm,
+  postResetBtn,
+  postSearch,
+  postsTable,
+  postId,
+  postTitle,
+  postExcerpt,
+  postContent,
+  postDate,
+  postImage,
+  postImageFile,
+  postLikes,
+  portfolioFormTitle,
+  portfolioForm,
+  portfolioResetBtn,
+  portfolioSearch,
+  portfolioTable,
+  portfolioId,
+  portfolioTitle,
+  portfolioCategory,
+  portfolioYear,
+  portfolioSort,
+  portfolioImage,
+  portfolioImageFile,
+  portfolioDescription,
+  portfolioActive,
+  productFormTitle,
+  productForm,
+  productResetBtn,
+  productSearch,
+  productsTable,
+  productId,
+  productName,
+  productSlug,
+  productCategory,
+  productPrice,
+  productStock,
+  productImage,
+  productActive,
+  productShort,
+  productDescription,
+  productGallery,
+  ordersStatusFilter,
+  ordersTable,
+  orderSelected,
+  orderDetails,
+  orderUpdateForm,
+  orderStatus,
+  orderNotes,
+  orderDeleteBtn,
+  mediaUploadForm,
+  mediaUploadFile,
+  mediaRefreshBtn,
+  mediaGrid,
+  userFormTitle,
+  userForm,
+  userResetBtn,
+  usersSearch,
+  usersTable,
+  userId,
+  userUsername,
+  userPassword,
+  userActive,
+};
+
+const missingDomBindings = Object.entries(domBindings)
+  .filter(([, element]) => !element)
+  .map(([name]) => name);
+
+const hasAllDomBindings = missingDomBindings.length === 0;
+
+if (!hasAllDomBindings) {
+  console.error(
+    `[admin] Estrutura do painel incompleta. Atualize o deploy/cache e recarregue a pagina. Elementos ausentes: ${missingDomBindings.join(', ')}`
+  );
+}
+
 const clearContentForm = () => {
   contentId.value = '';
   contentKey.value = '';
@@ -1029,6 +1146,7 @@ const loadUsers = async () => {
   applyUsersFilter();
 };
 
+if (hasAllDomBindings) {
 ordersStatusFilter.addEventListener('change', async () => {
   try {
     await loadOrders();
@@ -1291,3 +1409,4 @@ refreshAllBtn.addEventListener('click', async () => {
   setActiveTab('dashboard');
   await checkAuth();
 })();
+}
