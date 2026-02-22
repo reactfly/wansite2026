@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1771695972252,
+    "date": "21/02/2026",
+    "title": "Meu novo site esta no ar!",
+    "excerpt": "Novo site no ar!",
+    "content": "Meu novo site esta no ar! ",
+    "image": "/uploads/1771695972007-Screenshot_1.png"
+  },
+  {
+    "id": 1,
+    "title": "A Jornada da Cor na Escultura Contemporânea",
+    "excerpt": "Explorando as nuances e o impacto psicológico das cores em superfícies tridimensionais.",
+    "content": "A escultura contemporânea vem redescobrindo a cor não apenas como um detalhe decorativo, mas como um elemento estrutural...",
+    "image": "https://picsum.photos/600/400?random=20",
+    "date": "21/02/2026",
+    "likes": 0
+  },
+  {
+    "id": 2,
+    "title": "A Simbiose entre Som e Forma",
+    "excerpt": "Como as frequências sonoras podem inspirar a criação de texturas e volumes únicos.",
+    "content": "A música sempre foi uma fonte inesgotável de inspiração para as artes visuais...",
+    "image": "https://picsum.photos/600/400?random=21",
+    "date": "15/02/2026",
+    "likes": 0
+  }
+]

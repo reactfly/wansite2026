@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel Admin | Wan Bit'ha</title>
+    <link rel="stylesheet" href="/admin/styles.css" />
+  </head>
+  <body>
+    <div id="toast" class="toast hidden"></div>
+
+    <main class="layout">
+      <section id="login-view" class="card auth-card hidden">
+        <header>
+          <h1>Painel Administrativo</h1>
+          <p>Entre com suas credenciais para gerenciar o site completo.</p>
+        </header>
+
+        <form id="login-form" class="stack">
+          <label>
+            Usuario
+            <input id="login-username" type="text" autocomplete="username" required />
+          </label>
+
+          <label>
+            Senha
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+
+          <button id="login-submit" type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section id="admin-view" class="hidden">
+        <header class="topbar card">
+          <div>
+            <h2>Painel Admin Wan Bit'ha</h2>
+            <p id="user-label"></p>
+          </div>
+          <div class="topbar-actions">
+            <button id="refresh-all" type="button">Atualizar tudo</button>
+            <button id="logout-btn" type="button" class="danger">Sair</button>
+          </div>
+        </header>
+
+        <nav class="tabs card" id="tabs-nav">
+          <button type="button" class="tab-btn active" data-tab="dashboard">Dashboard</button>
+          <button type="button" class="tab-btn" data-tab="content">Conteudo</button>
+          <button type="button" class="tab-btn" data-tab="blog">Blog</button>
+          <button type="button" class="tab-btn" data-tab="portfolio">Portfolio</button>
+          <button type="button" class="tab-btn" data-tab="products">Produtos</button>
+          <button type="button" class="tab-btn" data-tab="orders">Pedidos</button>
+          <button type="button" class="tab-btn" data-tab="media">Midia</button>
+          <button type="button" class="tab-btn" data-tab="users">Usuarios</button>
+        </nav>
+
+        <section id="tab-dashboard" class="panel active-panel">
+          <div class="stats-grid">
+            <article class="card stat"><h3>Posts</h3><p id="dash-posts">0</p></article>
+            <article class="card stat"><h3>Curtidas</h3><p id="dash-likes">0</p></article>
+            <article class="card stat"><h3>Conteudos</h3><p id="dash-content">0</p></article>
+            <article class="card stat"><h3>Portfolio</h3><p id="dash-portfolio">0</p></article>
+            <article class="card stat"><h3>Produtos</h3><p id="dash-products">0</p></article>
+            <article class="card stat"><h3>Produtos ativos</h3><p id="dash-active-products">0</p></article>
+            <article class="card stat"><h3>Pedidos</h3><p id="dash-orders">0</p></article>
+            <article class="card stat"><h3>Pedidos pendentes</h3><p id="dash-pending-orders">0</p></article>
+            <article class="card stat"><h3>Usuarios admin</h3><p id="dash-users">0</p></article>
+          </div>
+          <p class="updated">Ultima atualizacao: <span id="dash-updated">-</span></p>
+        </section>
+
+        <section id="tab-content" class="panel hidden">
+          <div class="content-grid">
+            <article class="card form-card">
+              <header class="row-between">
+                <h3 id="content-form-title">Novo conteudo</h3>
+                <button id="content-reset" type="button">Limpar</button>
+              </header>
+
+              <form id="content-form" class="stack">
+                <input id="content-id" type="hidden" />
+
+                <label>
+                  Chave (ex: hero_title)
+                  <input id="content-key" type="text" required />
+                </label>
+
+                <label>
+                  Secao
+                  <input id="content-section" type="text" value="geral" />
+                </label>
+
+                <label>
+                  Titulo interno
+                  <input id="content-title" type="text" />
+                </label>
+
+                <label>
+                  Tipo
+                  <select id="content-type">
+                    <option value="text">Texto</option>
+                    <option value="richtext">Texto rico</option>
+                    <option value="json">JSON</option>
+                  </select>
+                </label>
+
+                <label>
+                  Valor
+                  <textarea id="content-value" rows="7" required></textarea>
+                </label>
+
+                <label>
+                  Ordem
+                  <input id="content-sort" type="number" value="0" />
+                </label>
+
+                <button id="content-save" type="submit">Salvar conteudo</button>
+              </form>
+            </article>
+
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Conteudos do Site</h3>
+                <input id="content-search" type="search" placeholder="Buscar por chave, secao ou valor..." />
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Chave</th>
+                      <th>Secao</th>
+                      <th>Valor</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="content-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-blog" class="panel hidden">
+          <div class="content-grid">
+            <article class="card form-card">
+              <header class="row-between">
+                <h3 id="post-form-title">Novo post</h3>
+                <button id="post-reset" type="button">Limpar</button>
+              </header>
+
+              <form id="post-form" class="stack">
+                <input id="post-id" type="hidden" />
+
+                <label>
+                  Titulo
+                  <input id="post-title" type="text" required />
+                </label>
+
+                <label>
+                  Resumo
+                  <textarea id="post-excerpt" rows="3"></textarea>
+                </label>
+
+                <label>
+                  Conteudo
+                  <textarea id="post-content" rows="8" required></textarea>
+                </label>
+
+                <label>
+                  Data
+                  <input id="post-date" type="text" placeholder="dd/mm/aaaa" />
+                </label>
+
+                <label>
+                  URL da imagem
+                  <input id="post-image" type="text" placeholder="/public/uploads/arquivo.png ou https://..." />
+                </label>
+
+                <label>
+                  Enviar imagem
+                  <input id="post-image-file" type="file" accept="image/*" />
+                </label>
+
+                <label>
+                  Curtidas
+                  <input id="post-likes" type="number" min="0" value="0" />
+                </label>
+
+                <button id="post-save" type="submit">Salvar post</button>
+              </form>
+            </article>
+
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Posts</h3>
+                <input id="post-search" type="search" placeholder="Buscar por titulo..." />
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Titulo</th>
+                      <th>Data</th>
+                      <th>Curtidas</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="posts-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-portfolio" class="panel hidden">
+          <div class="content-grid">
+            <article class="card form-card">
+              <header class="row-between">
+                <h3 id="portfolio-form-title">Novo item do portfolio</h3>
+                <button id="portfolio-reset" type="button">Limpar</button>
+              </header>
+
+              <form id="portfolio-form" class="stack">
+                <input id="portfolio-id" type="hidden" />
+
+                <label>
+                  Titulo
+                  <input id="portfolio-title" type="text" required />
+                </label>
+
+                <label>
+                  Categoria
+                  <input id="portfolio-category" type="text" placeholder="Ex: Instalacao" />
+                </label>
+
+                <div class="inline-grid">
+                  <label>
+                    Ano
+                    <input id="portfolio-year" type="text" placeholder="2026" />
+                  </label>
+                  <label>
+                    Ordem
+                    <input id="portfolio-sort" type="number" value="0" />
+                  </label>
+                </div>
+
+                <label>
+                  URL da imagem
+                  <input id="portfolio-image" type="text" placeholder="/public/uploads/arquivo.png ou https://..." />
+                </label>
+
+                <label>
+                  Enviar imagem
+                  <input id="portfolio-image-file" type="file" accept="image/*" />
+                </label>
+
+                <label class="checkbox-label">
+                  <input id="portfolio-active" type="checkbox" checked />
+                  Exibir no portfolio
+                </label>
+
+                <label>
+                  Descricao
+                  <textarea id="portfolio-description" rows="5"></textarea>
+                </label>
+
+                <button id="portfolio-save" type="submit">Salvar trabalho</button>
+              </form>
+            </article>
+
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Acervo de Trabalhos</h3>
+                <input id="portfolio-search" type="search" placeholder="Buscar por titulo, categoria ou ano..." />
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Trabalho</th>
+                      <th>Categoria</th>
+                      <th>Ano</th>
+                      <th>Status</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="portfolio-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-products" class="panel hidden">
+          <div class="content-grid">
+            <article class="card form-card">
+              <header class="row-between">
+                <h3 id="product-form-title">Novo produto</h3>
+                <button id="product-reset" type="button">Limpar</button>
+              </header>
+
+              <form id="product-form" class="stack">
+                <input id="product-id" type="hidden" />
+
+                <label>
+                  Nome
+                  <input id="product-name" type="text" required />
+                </label>
+
+                <label>
+                  Slug
+                  <input id="product-slug" type="text" placeholder="gerado automaticamente" />
+                </label>
+
+                <label>
+                  Categoria
+                  <input id="product-category" type="text" placeholder="Ex: Pintura" />
+                </label>
+
+                <div class="inline-grid">
+                  <label>
+                    Preco
+                    <input id="product-price" type="number" step="0.01" min="0" value="0" />
+                  </label>
+                  <label>
+                    Estoque
+                    <input id="product-stock" type="number" min="0" value="0" />
+                  </label>
+                </div>
+
+                <label>
+                  URL da imagem principal
+                  <input id="product-image" type="text" placeholder="/public/uploads/arquivo.png ou https://..." />
+                </label>
+
+                <label class="checkbox-label">
+                  <input id="product-active" type="checkbox" checked />
+                  Produto ativo
+                </label>
+
+                <label>
+                  Descricao curta
+                  <textarea id="product-short" rows="2"></textarea>
+                </label>
+
+                <label>
+                  Descricao completa
+                  <textarea id="product-description" rows="5"></textarea>
+                </label>
+
+                <label>
+                  Galeria (uma URL por linha)
+                  <textarea id="product-gallery" rows="4"></textarea>
+                </label>
+
+                <button id="product-save" type="submit">Salvar produto</button>
+              </form>
+            </article>
+
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Produtos</h3>
+                <input id="product-search" type="search" placeholder="Buscar por nome, slug ou categoria..." />
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Produto</th>
+                      <th>Preco</th>
+                      <th>Estoque</th>
+                      <th>Status</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="products-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-orders" class="panel hidden">
+          <div class="orders-grid">
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Pedidos</h3>
+                <select id="orders-status-filter">
+                  <option value="">Todos</option>
+                  <option value="novo">Novo</option>
+                  <option value="aguardando_pagamento">Aguardando pagamento</option>
+                  <option value="pago">Pago</option>
+                  <option value="em_preparo">Em preparo</option>
+                  <option value="enviado">Enviado</option>
+                  <option value="entregue">Entregue</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Cliente</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                      <th>Data</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="orders-table"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="card form-card">
+              <header class="row-between">
+                <h3>Detalhes do Pedido</h3>
+                <span id="order-selected">Nenhum selecionado</span>
+              </header>
+
+              <div id="order-details" class="order-details">Selecione um pedido para visualizar.</div>
+
+              <form id="order-update-form" class="stack">
+                <label>
+                  Status
+                  <select id="order-status">
+                    <option value="novo">Novo</option>
+                    <option value="aguardando_pagamento">Aguardando pagamento</option>
+                    <option value="pago">Pago</option>
+                    <option value="em_preparo">Em preparo</option>
+                    <option value="enviado">Enviado</option>
+                    <option value="entregue">Entregue</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </label>
+
+                <label>
+                  Observacoes
+                  <textarea id="order-notes" rows="4"></textarea>
+                </label>
+
+                <div class="row-actions">
+                  <button id="order-save" type="submit">Atualizar pedido</button>
+                  <button id="order-delete" type="button" class="danger">Excluir pedido</button>
+                </div>
+              </form>
+            </article>
+          </div>
+        </section>
+
+        <section id="tab-media" class="panel hidden">
+          <article class="card list-card">
+            <header class="row-between">
+              <h3>Biblioteca de Midia</h3>
+              <div class="row-actions">
+                <form id="media-upload-form" class="inline-form">
+                  <input id="media-upload-file" type="file" accept="image/*" required />
+                  <button type="submit">Enviar</button>
+                </form>
+                <button id="media-refresh" type="button">Atualizar</button>
+              </div>
+            </header>
+
+            <div id="media-grid" class="media-grid"></div>
+          </article>
+        </section>
+
+        <section id="tab-users" class="panel hidden">
+          <div class="content-grid">
+            <article class="card form-card">
+              <header class="row-between">
+                <h3 id="user-form-title">Novo usuario admin</h3>
+                <button id="user-reset" type="button">Limpar</button>
+              </header>
+
+              <form id="user-form" class="stack">
+                <input id="user-id" type="hidden" />
+
+                <label>
+                  Usuario
+                  <input id="user-username" type="text" required />
+                </label>
+
+                <label>
+                  Senha
+                  <input id="user-password" type="password" placeholder="Obrigatoria no cadastro" />
+                </label>
+
+                <label class="checkbox-label">
+                  <input id="user-active" type="checkbox" checked />
+                  Usuario ativo
+                </label>
+
+                <button id="user-save" type="submit">Salvar usuario</button>
+              </form>
+            </article>
+
+            <article class="card list-card">
+              <header class="row-between">
+                <h3>Usuarios Administradores</h3>
+                <input id="users-search" type="search" placeholder="Buscar por usuario..." />
+              </header>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Usuario</th>
+                      <th>Status</th>
+                      <th>Criado em</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-table"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="/admin/app.js"></script>
+  </body>
+</html>

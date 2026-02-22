@@ -1,0 +1,7 @@
+
+> wanbitha---portfolio@0.0.0 start
+> node server.js
+
+[db] Conexao MySQL ativa
+Servidor ativo em http://localhost:3001
+Painel admin: http://localhost:3001/admin
