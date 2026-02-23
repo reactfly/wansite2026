@@ -29,10 +29,10 @@ const POSTS_FILE = join(__dirname, 'posts.json');
 const UPLOADS_DIR = join(__dirname, 'public', 'uploads');
 
 const DB_CONFIG = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'wanbitha',
   port: Number(process.env.DB_PORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
@@ -42,10 +42,10 @@ const DB_CONFIG = {
 };
 
 const AUTH_COOKIE_NAME = 'wb_admin_token';
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.ADMIN_JWT_EXPIRES_IN || '12h';
 const ADMIN_DEFAULT_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_DEFAULT_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 const CONTENT_TYPES = new Set(['text', 'richtext', 'json']);
 const ORDER_STATUSES = new Set(['novo', 'aguardando_pagamento', 'pago', 'em_preparo', 'enviado', 'entregue', 'cancelado']);
@@ -62,7 +62,21 @@ const DEFAULT_SITE_CONTENT = [
 let dbPool = null;
 
 // Segurança e performance
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "http:", "*"],
+      connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+      mediaSrc: ["'self'", "https:", "http:", "data:", "blob:"],
+      frameSrc: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(compression());
 app.use(morgan('combined'));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
@@ -70,7 +84,6 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(compression());
 
 const ensureUploadsDir = () => {
   if (!fs.existsSync(UPLOADS_DIR)) {
@@ -142,6 +155,15 @@ const normalizeGalleryInput = (value) => {
 
 ensureUploadsDir();
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    database: isDbConnected() ? 'connected' : 'disconnected'
+  });
+});
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     ensureUploadsDir();
@@ -165,7 +187,9 @@ app.use(
   })
 );
 
-app.use('/admin', express.static(ADMIN_DIR, { index: false }));
+app.use('/admin', express.static(ADMIN_DIR));
+app.use('/imagens', express.static(join(__dirname, 'imagens')));
+app.use('/gallery', express.static(join(__dirname, 'gallery')));
 
 app.use(
   express.static(HAS_DIST_BUILD ? DIST_DIR : __dirname, {
@@ -177,7 +201,10 @@ const isDbConnected = () => dbPool !== null;
 
 const requireDatabase = (req, res, next) => {
   if (!isDbConnected()) {
-    return res.status(503).json({ error: 'Banco indisponivel no momento' });
+    return res.status(503).json({ 
+      error: 'Servico temporariamente indisponivel',
+      message: 'Banco de dados indisponivel. Tente novamente em alguns minutos ou entre em contato com o administrador.'
+    });
   }
   return next();
 };

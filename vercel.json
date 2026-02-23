@@ -1,9 +1,22 @@
 {
   "version": 2,
   "builds": [
+    { "src": "assets/**", "use": "@vercel/static" },
+    { "src": "imagens/**", "use": "@vercel/static" },
+    { "src": "admin/**", "use": "@vercel/static" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "favicon.ico", "use": "@vercel/static" },
+    { "src": "site-dynamic.js", "use": "@vercel/static" },
     { "src": "server.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/server.js" }
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/imagens/(.*)", "dest": "/imagens/$1" },
+    { "src": "/admin/(.*)", "dest": "/admin/$1" },
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/site-dynamic.js", "dest": "/site-dynamic.js" },
+    { "src": "/api/(.*)", "dest": "/server.js" },
+    { "src": "/admin", "dest": "/admin/index.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
