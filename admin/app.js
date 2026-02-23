@@ -105,10 +105,12 @@ const productCategory = document.getElementById('product-category');
 const productPrice = document.getElementById('product-price');
 const productStock = document.getElementById('product-stock');
 const productImage = document.getElementById('product-image');
+const productImageFile = document.getElementById('product-image-file');
 const productActive = document.getElementById('product-active');
 const productShort = document.getElementById('product-short');
 const productDescription = document.getElementById('product-description');
 const productGallery = document.getElementById('product-gallery');
+const productGalleryFiles = document.getElementById('product-gallery-files');
 
 const ordersStatusFilter = document.getElementById('orders-status-filter');
 const ordersTable = document.getElementById('orders-table');
@@ -584,13 +586,13 @@ const loadPortfolio = async () => {
   applyPortfolioFilter();
 };
 
-const uploadImageIfNeeded = async (fileInput) => {
-  if (!fileInput.files || !fileInput.files.length) {
+const uploadImageFile = async (file) => {
+  if (!file) {
     return null;
   }
 
   const fd = new FormData();
-  fd.append('image', fileInput.files[0]);
+  fd.append('image', file);
   const result = await apiRequest('/api/admin/upload', {
     method: 'POST',
     body: fd,
@@ -598,6 +600,23 @@ const uploadImageIfNeeded = async (fileInput) => {
   });
 
   return result.url;
+};
+
+const uploadImageIfNeeded = async (fileInput) => {
+  if (!fileInput || !fileInput.files || !fileInput.files.length) {
+    return null;
+  }
+  return uploadImageFile(fileInput.files[0]);
+};
+
+const uploadImagesIfNeeded = async (fileInput) => {
+  if (!fileInput || !fileInput.files || !fileInput.files.length) {
+    return [];
+  }
+
+  const files = Array.from(fileInput.files);
+  const uploadedUrls = await Promise.all(files.map((file) => uploadImageFile(file)));
+  return uploadedUrls.filter(Boolean);
 };
 
 const clearProductForm = () => {
@@ -612,6 +631,8 @@ const clearProductForm = () => {
   productShort.value = '';
   productDescription.value = '';
   productGallery.value = '';
+  if (productImageFile) productImageFile.value = '';
+  if (productGalleryFiles) productGalleryFiles.value = '';
   productFormTitle.textContent = 'Novo produto';
 };
 
@@ -627,6 +648,8 @@ const fillProductForm = (product) => {
   productShort.value = product.shortDescription || '';
   productDescription.value = product.description || '';
   productGallery.value = Array.isArray(product.gallery) ? product.gallery.join('\n') : '';
+  if (productImageFile) productImageFile.value = '';
+  if (productGalleryFiles) productGalleryFiles.value = '';
   productFormTitle.textContent = `Editando produto #${product.id}`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
@@ -902,28 +925,33 @@ portfolioTable.addEventListener('click', async (event) => {
 productForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const payload = {
-    name: productName.value.trim(),
-    slug: productSlug.value.trim(),
-    category: productCategory.value.trim(),
-    price: Number(productPrice.value || 0),
-    stock: Number(productStock.value || 0),
-    image: productImage.value.trim(),
-    isActive: productActive.checked,
-    shortDescription: productShort.value.trim(),
-    description: productDescription.value.trim(),
-    gallery: productGallery.value
-      .split(/\r?\n/g)
-      .map((item) => item.trim())
-      .filter(Boolean),
-  };
-
-  if (!payload.name) {
+  const productNameValue = productName.value.trim();
+  if (!productNameValue) {
     showToast('Nome do produto e obrigatorio.', 'error');
     return;
   }
 
   try {
+    const uploadedImageUrl = await uploadImageIfNeeded(productImageFile);
+    const uploadedGalleryUrls = await uploadImagesIfNeeded(productGalleryFiles);
+    const galleryTextUrls = productGallery.value
+      .split(/\r?\n/g)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const payload = {
+      name: productNameValue,
+      slug: productSlug.value.trim(),
+      category: productCategory.value.trim(),
+      price: Number(productPrice.value || 0),
+      stock: Number(productStock.value || 0),
+      image: uploadedImageUrl || productImage.value.trim(),
+      isActive: productActive.checked,
+      shortDescription: productShort.value.trim(),
+      description: productDescription.value.trim(),
+      gallery: Array.from(new Set([...galleryTextUrls, ...uploadedGalleryUrls])),
+    };
+
     if (productId.value) {
       await apiRequest(`/api/admin/products/${productId.value}`, {
         method: 'PUT',

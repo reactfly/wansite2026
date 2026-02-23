@@ -28,6 +28,7 @@ if (!(Test-Path $pscp) -or !(Test-Path $plink)) {
 }
 
 $items = @(
+  '.env',
   'admin',
   'api',
   'assets',
