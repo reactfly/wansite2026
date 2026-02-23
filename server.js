@@ -28,7 +28,7 @@ const HAS_DIST_BUILD = fs.existsSync(DIST_INDEX);
 const POSTS_FILE = join(__dirname, 'posts.json');
 const UPLOADS_DIR = join(__dirname, 'public', 'uploads');
 
-const DB_CONFIG = {
+  const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
@@ -38,7 +38,8 @@ const DB_CONFIG = {
   connectionLimit: 10,
   queueLimit: 0,
   charset: 'utf8mb4',
-  connectTimeout: 10000,
+  connectTimeout: 2000,
+  acquireTimeout: 2000,
 };
 
 const AUTH_COOKIE_NAME = 'wb_admin_token';
@@ -201,14 +202,10 @@ const isDbConnected = () => dbPool !== null;
 
 const requireDatabase = (req, res, next) => {
   if (!isDbConnected()) {
-    // Se for um método de leitura, deixa passar para o handler tratar o fallback
-    if (req.method === 'GET') {
-      return next();
-    }
-    
-    return res.status(503).json({ 
-      error: 'Servico temporariamente indisponivel',
-      message: 'Banco de dados indisponivel para operacoes de escrita. Tente novamente em alguns minutos.'
+    if (req.method === 'GET') return next();
+    return res.status(200).json({ 
+      offline: true, 
+      message: 'Modo Offline: No momento nao e possivel salvar alteracoes (Banco indisponivel).' 
     });
   }
   return next();
