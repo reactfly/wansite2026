@@ -201,9 +201,14 @@ const isDbConnected = () => dbPool !== null;
 
 const requireDatabase = (req, res, next) => {
   if (!isDbConnected()) {
+    // Se for um método de leitura, deixa passar para o handler tratar o fallback
+    if (req.method === 'GET') {
+      return next();
+    }
+    
     return res.status(503).json({ 
       error: 'Servico temporariamente indisponivel',
-      message: 'Banco de dados indisponivel. Tente novamente em alguns minutos ou entre em contato com o administrador.'
+      message: 'Banco de dados indisponivel para operacoes de escrita. Tente novamente em alguns minutos.'
     });
   }
   return next();
