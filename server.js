@@ -28,7 +28,7 @@ const HAS_DIST_BUILD = fs.existsSync(DIST_INDEX);
 const POSTS_FILE = join(__dirname, 'posts.json');
 const UPLOADS_DIR = join(__dirname, 'public', 'uploads');
 
-  const DB_CONFIG = {
+const DB_CONFIG = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
@@ -1903,12 +1903,18 @@ app.use((req, res) => {
   res.sendFile(HAS_DIST_BUILD ? DIST_INDEX : ROOT_INDEX);
 });
 
-const startServer = async () => {
-  await initializeDatabase();
-
+const startServer = () => {
+  // Inicia o servidor HTTP IMEDIATAMENTE para evitar 503 do proxy/infra
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor ativo na porta ${PORT}`);
     console.log(`Painel admin: /admin`);
+
+    // Inicia a conexão com o banco em segundo plano
+    initializeDatabase().then(() => {
+      console.log('[startup] Banco de dados inicializado com sucesso ou em modo fallback.');
+    }).catch(err => {
+      console.error('[startup] Erro critico na inicializacao do banco:', err);
+    });
   });
 };
 
